@@ -224,7 +224,7 @@ class BibParser
 					$citation .= '.';
 				}
 				if (!empty($item['DOI'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['DOI']) . '">' . htmlspecialchars($item['DOI']) . '</a>';
+					$citation .= ' <a href="' . htmlspecialchars($item['DOI']) . '" target="_blank">' . htmlspecialchars($item['DOI']) . '</a>';
 				}
 				break;
 				
@@ -235,7 +235,7 @@ class BibParser
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
-					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
@@ -248,7 +248,7 @@ class BibParser
 					$citation .= ' ' . htmlspecialchars($item['meetingName']) . '.';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
@@ -258,7 +258,7 @@ class BibParser
 					$citation .= '. ' . htmlspecialchars($item['interviewMedium']) . '.';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
@@ -269,21 +269,21 @@ class BibParser
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
-					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
 			case 'podcast':
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['seriesTitle'])) {
-					$citation .= '. ' . htmlspecialchars($item['seriesTitle']);
+					$citation .= '. ' . htmlspecialchars($item['seriesTitle']) . '';
 					if (!empty($item['episodeNumber'])) {
 						$citation .= ' (No. ' . htmlspecialchars($item['episodeNumber']) . ')';
 					}
 					$citation .= '.';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
@@ -293,7 +293,7 @@ class BibParser
 					$citation .= ' [' . htmlspecialchars($item['genre']) . '].';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
@@ -304,16 +304,16 @@ class BibParser
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
-					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				}
 				break;
 				
 			default:
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['DOI'])) {
-					$citation .= '. <a href="' . htmlspecialchars($item['DOI']) . '">' . htmlspecialchars($item['DOI']) . '</a>';
+					$citation .= '. <a href="' . htmlspecialchars($item['DOI']) . '" target="_blank">' . htmlspecialchars($item['DOI']) . '</a>';
 				} elseif (!empty($item['url'])) {
-					$citation .= '. <a href="' . htmlspecialchars($item['url']) . '">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= '. <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
 				} else {
 					$citation .= '.';
 				}
