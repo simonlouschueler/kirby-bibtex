@@ -1,0 +1,22 @@
+{
+    "name": "simonlou/better-bibtex",
+    "description": "BibTeX citation plugin for Kirby CMS",
+    "homepage": "https://github.com/simonlouschueler/kirby-bibtex",
+    "type": "kirby-plugin",
+    "version": "1.0.0-alpha",
+    "require": {
+        "getkirby/cms": "^3.0"
+    },
+    "authors": [
+        {
+            "name": "Simon Lou",
+            "email": "mail@simonlou.com"
+        }
+    ],
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "simonlou\\better-typo\\": "src/"
+        }
+    }
+}
