@@ -184,10 +184,10 @@ The bibliography is rendered as an unordered list with the following HTML struct
     <span>Cooper, A.</span> (2014). <i>About Face: The Essentials of Interaction Design</i> (Fourth edition). Wiley.
   </li>
   <li id="Allen-2024-SeriousPlay">
-    <span>Allen, A.</span> (2024). <i>Serious play</i> [Video]. Config 2024. <a href="https://www.youtube.com/watch?v=wBnIyD5I8mM">https://www.youtube.com/watch?v=wBnIyD5I8mM</a>
+    <span>Allen, A.</span> (2024). <i>Serious play</i> [Video]. Config 2024. <a href="https://www.youtube.com/watch?v=wBnIyD5I8mM"><span>youtube.com</span>/watch?v=wBnIyD5I8mM</a>
   </li>
   <li id="Fischer-2001-UserModelingHuman">
-    <span>Fischer, G.</span> (2001). <i>User Modeling in Human–Computer Interaction</i>. User Modeling and User-Adapted Interaction, 11, 65–86. <a href="https://doi.org/10.1023/A:1011145532042">https://doi.org/10.1023/A:1011145532042</a>
+    <span>Fischer, G.</span> (2001). <i>User Modeling in Human–Computer Interaction</i>. User Modeling and User-Adapted Interaction, 11, 65–86. <a href="https://doi.org/10.1023/A:1011145532042"><span>doi.org</span>/10.1023/A:1011145532042</a>
   </li>
 </ul>
 ```

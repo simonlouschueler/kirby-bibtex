@@ -223,8 +223,9 @@ class BibParser
 				} else {
 					$citation .= '.';
 				}
-				if (!empty($item['DOI'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['DOI']) . '" target="_blank">' . htmlspecialchars($item['DOI']) . '</a>';
+				$doi = $item['DOI'] ?? $item['doi'] ?? null;
+				if (!empty($doi)) {
+					$citation .= '<br><a href="' . htmlspecialchars($doi) . '" target="_blank">' . self::formatUrlLabel($doi) . '</a>';
 				}
 				break;
 				
@@ -235,7 +236,7 @@ class BibParser
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
-					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' ' . $accessDate . '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
@@ -248,7 +249,7 @@ class BibParser
 					$citation .= ' ' . htmlspecialchars($item['meetingName']) . '.';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
@@ -258,7 +259,7 @@ class BibParser
 					$citation .= '. ' . htmlspecialchars($item['interviewMedium']) . '.';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
@@ -269,7 +270,7 @@ class BibParser
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
-					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' ' . $accessDate . '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
@@ -283,7 +284,7 @@ class BibParser
 					$citation .= '.';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
@@ -293,7 +294,7 @@ class BibParser
 					$citation .= ' [' . htmlspecialchars($item['genre']) . '].';
 				}
 				if (!empty($item['url'])) {
-					$citation .= ' <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
@@ -304,16 +305,17 @@ class BibParser
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
-					$citation .= ' ' . $accessDate . '<a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= ' ' . $accessDate . '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 				
 			default:
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
-				if (!empty($item['DOI'])) {
-					$citation .= '. <a href="' . htmlspecialchars($item['DOI']) . '" target="_blank">' . htmlspecialchars($item['DOI']) . '</a>';
+				$doi = $item['DOI'] ?? $item['doi'] ?? null;
+				if (!empty($doi)) {
+					$citation .= '. <br><a href="' . htmlspecialchars($doi) . '" target="_blank">' . self::formatUrlLabel($doi) . '</a>';
 				} elseif (!empty($item['url'])) {
-					$citation .= '. <a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . htmlspecialchars($item['url']) . '</a>';
+					$citation .= '. <br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				} else {
 					$citation .= '.';
 				}
@@ -410,5 +412,22 @@ class BibParser
 		}
 		
 		return implode(' ', $initials);
+	}
+
+	private static function removeProtocolFromUrl($url)
+	{
+		// Remove http:// or https:// from the beginning of the URL
+		$url = preg_replace('/^https?:\/\//', '', $url);
+		// Remove www. from the beginning of the URL
+		$url = preg_replace('/^www\./', '', $url);
+		return $url;
+	}
+
+	private static function formatUrlLabel($url)
+	{
+		// Remove protocol and www
+		$url = self::removeProtocolFromUrl($url);
+		// Wrap the domain (first part) into a span, and remove trailing slash
+		return preg_replace('/^([^\/]+)(\/.*?)\/?$/', '<span>$1</span>$2', $url);
 	}
 }
