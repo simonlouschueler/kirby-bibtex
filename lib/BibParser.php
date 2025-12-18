@@ -134,11 +134,12 @@ class BibParser
 
 		// Handle simple citations: @key
 		// Example: @Fischer-2001-UserModelingHuman or @Walker-2003-GutsNewMachine
+		// Format: Author <span class="citation"><a href="#key">Year</a></span>
 		$text = preg_replace_callback('/@([A-Za-z0-9\-_]+)/', function ($matches) use ($bib) {
 			$key = $matches[1];
 			$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
 
-			return '<span class="citation"><a href="#' . $key . '">' . htmlspecialchars($data['author'] . ', ' . $data['year']) . '</a></span>';
+			return htmlspecialchars($data['author']) . ' <span class="citation"><a href="#' . $key . '">' . htmlspecialchars($data['year']) . '</a></span>';
 		}, $text);
 
 		return $text;
