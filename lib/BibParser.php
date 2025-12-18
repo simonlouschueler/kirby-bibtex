@@ -129,7 +129,7 @@ class BibParser
 			// Ensure there's a space between prefix and author name
 			$label = $prefix . (empty($prefix) ? '' : ' ') . $data['author'] . ', ' . $data['year'] . $suffix;
 
-			return '<span class="citation"><a href="#' . $key . '">' . htmlspecialchars($label) . '</a></span>';
+			return '<span class="citation"><a href="#' . $key . '">(' . htmlspecialchars($label) . ')</a></span>';
 		}, $text);
 
 		// Handle simple citations: @key
@@ -139,7 +139,7 @@ class BibParser
 			$key = $matches[1];
 			$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
 
-			return htmlspecialchars($data['author']) . ' <span class="citation"><a href="#' . $key . '">' . htmlspecialchars($data['year']) . '</a></span>';
+			return htmlspecialchars($data['author']) . ' <span class="citation"><a href="#' . $key . '">(' . htmlspecialchars($data['year']) . ')</a></span>';
 		}, $text);
 
 		return $text;
