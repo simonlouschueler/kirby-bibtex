@@ -120,16 +120,28 @@ class BibParser
 
 		// Handle complex citations: [prefix @key suffix]
 		// Example: [Jobs, as quoted in @Fischer-2001-UserModelingHuman, pp. 64]
-		$text = preg_replace_callback('/\[(.*?)@([A-Za-z0-9\-_]+)(.*?)\]/', function ($matches) use ($bib) {
-			$prefix = trim($matches[1]);
-			$key    = $matches[2];
-			$suffix = trim($matches[3]);
+		// Only match brackets that contain @citation-key pattern
+		$text = preg_replace_callback('/\[([^\]]*@[A-Za-z0-9\-_]+[^\]]*)\]/', function ($matches) use ($bib) {
+			$content = $matches[1];
+			
+			// Extract the citation key from the content (first @key pattern found)
+			if (preg_match('/@([A-Za-z0-9\-_]+)/', $content, $keyMatch)) {
+				$key = $keyMatch[1];
+				$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
+				
+				// Split content into prefix and suffix around the @key
+				$parts = preg_split('/@' . preg_quote($key, '/') . '/', $content, 2);
+				$prefix = trim($parts[0] ?? '');
+				$suffix = trim($parts[1] ?? '');
+				
+				// Ensure there's a space between prefix and author name
+				$label = $prefix . (empty($prefix) ? '' : ' ') . $data['author'] . ', ' . $data['year'] . $suffix;
 
-			$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
-			// Ensure there's a space between prefix and author name
-			$label = $prefix . (empty($prefix) ? '' : ' ') . $data['author'] . ', ' . $data['year'] . $suffix;
-
-			return '<span class="citation"><a href="#' . $key . '">(' . htmlspecialchars($label) . ')</a></span>';
+				return '<span class="citation"><a href="#' . $key . '">(' . htmlspecialchars($label) . ')</a></span>';
+			}
+			
+			// If no valid citation key found, return original brackets unchanged
+			return '[' . $content . ']';
 		}, $text);
 
 		// Handle simple citations: @key
