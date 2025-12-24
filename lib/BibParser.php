@@ -89,8 +89,8 @@ class BibParser
 				}
 			}
 			
-			// Extract year
-			$year = self::extractYearFromDate($item['date'] ?? '');
+			// Extract year/date
+			$year = self::formatDate($item['date'] ?? '');
 			
 			$bib[$citationKey] = [
 				'type' => $item['itemType'] ?? 'misc',
@@ -190,7 +190,7 @@ class BibParser
 	private static function formatJsonCitation($item)
 	{
 		$title = $item['title'] ?? '';
-		$year = self::extractYearFromDate($item['date'] ?? '');
+		$year = self::formatDate($item['date'] ?? '');
 		
 		// Format authors
 		$formattedAuthors = self::formatJsonAuthors($item['creators'] ?? []);
@@ -376,8 +376,81 @@ class BibParser
 			return 'n.d.';
 		}
 		
-		if (is_string($date) && preg_match('/^\d{4}/', $date, $matches)) {
+		if (!is_string($date)) {
+			return 'n.d.';
+		}
+		
+		// Try ISO 8601 datetime format: YYYY-MM-DDTHH:MM:SSZ (year at the beginning)
+		if (preg_match('/^(\d{4})-\d{2}-\d{2}T/', $date, $matches)) {
+			return $matches[1];
+		}
+		
+		// Try YYYY-MM-DD format (year at the beginning)
+		if (preg_match('/^(\d{4})-\d{2}-\d{2}/', $date, $matches)) {
+			return $matches[1];
+		}
+		
+		// Try MM/DD/YYYY or M/D/YYYY format (year at the end, allowing single-digit month/day)
+		if (preg_match('/\d{1,2}\/\d{1,2}\/(\d{4})$/', $date, $matches)) {
+			return $matches[1];
+		}
+		
+		// Fallback: check if date starts with 4 digits (YYYY format)
+		if (preg_match('/^\d{4}/', $date, $matches)) {
 			return $matches[0];
+		}
+		
+		return 'n.d.';
+	}
+
+	private static function formatDate($date)
+	{
+		if (empty($date)) {
+			return 'n.d.';
+		}
+		
+		if (!is_string($date)) {
+			return 'n.d.';
+		}
+		
+		// Try to parse ISO 8601 datetime format: YYYY-MM-DDTHH:MM:SSZ
+		$parsedDate = \DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $date);
+		if ($parsedDate === false) {
+			// Try without Z (timezone)
+			$parsedDate = \DateTime::createFromFormat('Y-m-d\TH:i:s', $date);
+		}
+		if ($parsedDate === false) {
+			// Try with microseconds
+			$parsedDate = \DateTime::createFromFormat('Y-m-d\TH:i:s.u\Z', $date);
+		}
+		if ($parsedDate === false) {
+			// Try with timezone offset
+			$parsedDate = \DateTime::createFromFormat('Y-m-d\TH:i:sP', $date);
+		}
+		
+		if ($parsedDate !== false) {
+			return $parsedDate->format('Y, F j');
+		}
+		
+		// Try YYYY-MM-DD format
+		$parsedDate = \DateTime::createFromFormat('Y-m-d', $date);
+		if ($parsedDate !== false) {
+			return $parsedDate->format('Y, F j');
+		}
+		
+		// Try MM/DD/YYYY or M/D/YYYY format (with or without leading zeros)
+		$parsedDate = \DateTime::createFromFormat('m/d/Y', $date);
+		if ($parsedDate === false) {
+			// Try with single-digit month/day format (n = month without leading zeros, j = day without leading zeros)
+			$parsedDate = \DateTime::createFromFormat('n/j/Y', $date);
+		}
+		if ($parsedDate !== false) {
+			return $parsedDate->format('Y, F j');
+		}
+		
+		// Fallback: return just the year if it starts with 4 digits
+		if (preg_match('/^(\d{4})/', $date, $matches)) {
+			return $matches[1];
 		}
 		
 		return 'n.d.';
