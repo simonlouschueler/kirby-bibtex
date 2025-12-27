@@ -78,7 +78,7 @@ class BibParser
 		foreach ($jsonData['items'] as $item) {
 			$citationKey = $item['citationKey'] ?? 'unknown';
 			
-			// Extract author information
+			// Extract author information (first author for display)
 			$author = 'Unknown';
 			if (isset($item['creators']) && is_array($item['creators']) && !empty($item['creators'])) {
 				$firstCreator = $item['creators'][0];
@@ -89,16 +89,23 @@ class BibParser
 				}
 			}
 			
+			// Extract all authors for disambiguation comparison
+			$allAuthors = self::extractAllAuthorLastNames($item['creators'] ?? []);
+			
 			// Extract year/date
 			$year = self::formatDate($item['date'] ?? '');
 			
 			$bib[$citationKey] = [
 				'type' => $item['itemType'] ?? 'misc',
 				'author' => $author,
+				'allAuthors' => $allAuthors,
 				'year' => $year,
 				'data' => $item
 			];
 		}
+		
+		// Add disambiguation letters for entries with same author and date
+		$bib = self::addDisambiguationLetters($bib);
 		
 		return $bib;
 	}
@@ -176,7 +183,7 @@ class BibParser
 		$bibliography = [];
 		
 		foreach ($bib as $key => $entry) {
-			$citation = self::formatJsonCitation($entry['data']);
+			$citation = self::formatJsonCitation($entry['data'], $entry['year']);
 			$bibliography[] = '<li id="' . htmlspecialchars($key) . '">' . $citation . '</li>';
 		}
 		
@@ -187,10 +194,10 @@ class BibParser
 		return '<ul class="bibliography">' . implode("\n", $bibliography) . '</ul>';
 	}
 
-	private static function formatJsonCitation($item)
+	private static function formatJsonCitation($item, $disambiguatedYear = null)
 	{
 		$title = $item['title'] ?? '';
-		$year = self::formatDate($item['date'] ?? '');
+		$year = $disambiguatedYear ?? self::formatDate($item['date'] ?? '');
 		
 		// Format authors
 		$formattedAuthors = self::formatJsonAuthors($item['creators'] ?? []);
@@ -515,5 +522,110 @@ class BibParser
 		$url = self::removeProtocolFromUrl($url);
 		// Wrap the domain (first part) into a span, and remove trailing slash
 		return preg_replace('/^([^\/]+)(\/.*?)\/?$/', '<span>$1</span>$2', $url);
+	}
+
+	/**
+	 * Add disambiguation letters (a, b, c, etc.) to entries with the same author last name and date
+	 */
+	private static function addDisambiguationLetters($bib)
+	{
+		// Group entries by all authors and normalized year
+		$groups = [];
+		
+		foreach ($bib as $key => $entry) {
+			$allAuthors = $entry['allAuthors'] ?? [];
+			$year = $entry['year'];
+			
+			// Normalize year for comparison (extract just the year number or "n.d.")
+			$normalizedYear = self::normalizeYearForComparison($year);
+			
+			// Create a group key from all authors (sorted for consistent comparison) and normalized year
+			$authorsKey = implode('|', $allAuthors);
+			$groupKey = $authorsKey . '|' . $normalizedYear;
+			
+			if (!isset($groups[$groupKey])) {
+				$groups[$groupKey] = [];
+			}
+			
+			$groups[$groupKey][] = $key;
+		}
+		
+		// Add disambiguation letters to entries in groups with multiple entries
+		foreach ($groups as $groupKeys) {
+			if (count($groupKeys) > 1) {
+				// Sort keys to ensure consistent ordering
+				sort($groupKeys);
+				
+				// Add letters a, b, c, etc.
+				$letterIndex = 0;
+				foreach ($groupKeys as $key) {
+					$originalYear = $bib[$key]['year'];
+					$bib[$key]['year'] = self::appendDisambiguationLetter($originalYear, $letterIndex);
+					$letterIndex++;
+				}
+			}
+		}
+		
+		return $bib;
+	}
+
+	/**
+	 * Extract all author last names from creators array for comparison
+	 */
+	private static function extractAllAuthorLastNames($creators)
+	{
+		$lastNames = [];
+		
+		if (empty($creators) || !is_array($creators)) {
+			return ['Unknown'];
+		}
+		
+		foreach ($creators as $creator) {
+			if (isset($creator['lastName'])) {
+				$lastNames[] = $creator['lastName'];
+			} elseif (isset($creator['name'])) {
+				// If only name is available, use it as-is
+				$lastNames[] = $creator['name'];
+			}
+		}
+		
+		// Sort to ensure consistent comparison regardless of order
+		sort($lastNames);
+		
+		return empty($lastNames) ? ['Unknown'] : $lastNames;
+	}
+
+	/**
+	 * Normalize year string for comparison (extract just the year number or "n.d.")
+	 */
+	private static function normalizeYearForComparison($year)
+	{
+		if ($year === 'n.d.') {
+			return 'n.d.';
+		}
+		
+		// Extract year number from formats like "2020" or "2020, January 1"
+		if (preg_match('/^(\d{4})/', $year, $matches)) {
+			return $matches[1];
+		}
+		
+		return $year;
+	}
+
+	/**
+	 * Append disambiguation letter to year string
+	 */
+	private static function appendDisambiguationLetter($year, $letterIndex)
+	{
+		// Convert letter index to letter (0->a, 1->b, etc.)
+		$letterChar = chr(97 + $letterIndex); // 97 is ASCII for 'a'
+		
+		// For "n.d." entries, use "n.d.-a" format instead of "n.d.a"
+		if ($year === 'n.d.') {
+			return 'n.d.-' . $letterChar;
+		}
+		
+		// Append letter to the year
+		return $year . $letterChar;
 	}
 }
