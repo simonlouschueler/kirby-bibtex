@@ -92,8 +92,8 @@ class BibParser
 			// Extract all authors for disambiguation comparison
 			$allAuthors = self::extractAllAuthorLastNames($item['creators'] ?? []);
 			
-			// Extract year/date
-			$year = self::formatDate($item['date'] ?? '');
+			// Extract year/date (only year for in-text citations)
+			$year = self::extractYearFromDate($item['date'] ?? '');
 			
 			$bib[$citationKey] = [
 				'type' => $item['itemType'] ?? 'misc',
@@ -197,7 +197,33 @@ class BibParser
 	private static function formatJsonCitation($item, $disambiguatedYear = null)
 	{
 		$title = $item['title'] ?? '';
-		$year = $disambiguatedYear ?? self::formatDate($item['date'] ?? '');
+		
+		// For bibliography, always use full date format
+		$fullDate = self::formatDate($item['date'] ?? '');
+		
+		// Extract disambiguation letter from disambiguatedYear if present (e.g., "2020a" -> "a")
+		$disambiguationLetter = '';
+		if ($disambiguatedYear && preg_match('/([a-z])$/', $disambiguatedYear, $matches)) {
+			$disambiguationLetter = $matches[1];
+		} elseif ($disambiguatedYear && preg_match('/^n\.d\.-([a-z])$/', $disambiguatedYear, $matches)) {
+			// Handle "n.d.-a" format
+			$disambiguationLetter = $matches[1];
+		}
+		
+		// Insert disambiguation letter right after the year (before comma and month/day)
+		// e.g., "2020, January 1" -> "2020a, January 1"
+		if ($disambiguationLetter) {
+			if (preg_match('/^(\d{4})(,.*)$/', $fullDate, $matches)) {
+				$year = $matches[1] . $disambiguationLetter . $matches[2];
+			} elseif ($fullDate === 'n.d.') {
+				$year = 'n.d.-' . $disambiguationLetter;
+			} else {
+				// Fallback: append at end if pattern doesn't match
+				$year = $fullDate . $disambiguationLetter;
+			}
+		} else {
+			$year = $fullDate;
+		}
 		
 		// Format authors
 		$formattedAuthors = self::formatJsonAuthors($item['creators'] ?? []);
@@ -211,6 +237,10 @@ class BibParser
 		}
 		
 		$formattedTitle = $smartypantsFunction ? call_user_func($smartypantsFunction, $title) : $title;
+		$formattedTitle = rtrim($formattedTitle);
+		if (!preg_match('/[!?.;,]$|\.\.\.$/', $formattedTitle)) {
+			$formattedTitle .= '.';
+		}
 		
 		// Format based on entry type
 		switch ($item['itemType'] ?? 'misc') {
@@ -222,9 +252,7 @@ class BibParser
 				}
 				if (!empty($item['publisher'])) {
 					$formattedPublisher = $smartypantsFunction ? call_user_func($smartypantsFunction, $item['publisher']) : $item['publisher'];
-					$citation .= '. ' . $formattedPublisher . '.';
-				} else {
-					$citation .= '.';
+					$citation .= ' ' . $formattedPublisher . '.';
 				}
 				break;
 				
@@ -232,15 +260,13 @@ class BibParser
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['publicationTitle'])) {
 					$formattedJournal = $smartypantsFunction ? call_user_func($smartypantsFunction, $item['publicationTitle']) : $item['publicationTitle'];
-					$citation .= '. ' . $formattedJournal;
+					$citation .= ' ' . $formattedJournal;
 					if (!empty($item['volume'])) {
 						$citation .= ', ' . htmlspecialchars($item['volume']);
 					}
 					if (!empty($item['pages'])) {
 						$citation .= ', ' . htmlspecialchars($item['pages']);
 					}
-					$citation .= '.';
-				} else {
 					$citation .= '.';
 				}
 				$doi = $item['DOI'] ?? $item['doi'] ?? null;
@@ -252,7 +278,7 @@ class BibParser
 			case 'webpage':
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['websiteTitle'])) {
-					$citation .= '. ' . htmlspecialchars($item['websiteTitle']) . '.';
+					$citation .= ' ' . htmlspecialchars($item['websiteTitle']) . '.';
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
@@ -276,7 +302,7 @@ class BibParser
 			case 'interview':
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['interviewMedium'])) {
-					$citation .= '. ' . htmlspecialchars($item['interviewMedium']) . '.';
+					$citation .= ' ' . htmlspecialchars($item['interviewMedium']) . '.';
 				}
 				if (!empty($item['url'])) {
 					$citation .= '<br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
@@ -286,7 +312,7 @@ class BibParser
 			case 'blogPost':
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['blogTitle'])) {
-					$citation .= '. ' . htmlspecialchars($item['blogTitle']) . '.';
+					$citation .= ' ' . htmlspecialchars($item['blogTitle']) . '.';
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
@@ -297,7 +323,7 @@ class BibParser
 			case 'podcast':
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['seriesTitle'])) {
-					$citation .= '. ' . htmlspecialchars($item['seriesTitle']) . '';
+					$citation .= ' ' . htmlspecialchars($item['seriesTitle']) . '';
 					if (!empty($item['episodeNumber'])) {
 						$citation .= ' (No. ' . htmlspecialchars($item['episodeNumber']) . ')';
 					}
@@ -321,7 +347,7 @@ class BibParser
 			case 'newspaperArticle':
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				if (!empty($item['publicationTitle'])) {
-					$citation .= '. ' . htmlspecialchars($item['publicationTitle']) . '.';
+					$citation .= ' ' . htmlspecialchars($item['publicationTitle']) . '.';
 				}
 				if (!empty($item['url'])) {
 					$accessDate = !empty($item['accessDate']) ? self::formatAccessDate($item['accessDate']) : '';
@@ -333,11 +359,9 @@ class BibParser
 				$citation = '<span>' . htmlspecialchars($formattedAuthors) . '</span> (' . $year . '). <i>' . $formattedTitle . '</i>';
 				$doi = $item['DOI'] ?? $item['doi'] ?? null;
 				if (!empty($doi)) {
-					$citation .= '. <br><a href="' . htmlspecialchars($doi) . '" target="_blank">' . self::formatUrlLabel($doi) . '</a>';
+					$citation .= ' <br><a href="' . htmlspecialchars($doi) . '" target="_blank">' . self::formatUrlLabel($doi) . '</a>';
 				} elseif (!empty($item['url'])) {
-					$citation .= '. <br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
-				} else {
-					$citation .= '.';
+					$citation .= ' <br><a href="' . htmlspecialchars($item['url']) . '" target="_blank">' . self::formatUrlLabel($item['url']) . '</a>';
 				}
 				break;
 		}
