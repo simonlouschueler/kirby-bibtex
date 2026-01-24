@@ -125,26 +125,108 @@ class BibParser
 			return $text;
 		}
 
-		// Handle complex citations: [prefix @key suffix]
+		// Handle complex citations: [prefix @key suffix] or multiple keys in one bracket
 		// Example: [Jobs, as quoted in @Fischer-2001-UserModelingHuman, pp. 64]
+		// Example: [@Voorhees-2025-MacOS26Tahoe; @Heer-2025-LiquidGlass]
 		// Only match brackets that contain @citation-key pattern
 		$text = preg_replace_callback('/\[([^\]]*@[A-Za-z0-9\-_]+[^\]]*)\]/', function ($matches) use ($bib) {
 			$content = $matches[1];
 			
-			// Extract the citation key from the content (first @key pattern found)
-			if (preg_match('/@([A-Za-z0-9\-_]+)/', $content, $keyMatch)) {
-				$key = $keyMatch[1];
-				$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
+			// Extract all citation keys from the content
+			if (preg_match_all('/@([A-Za-z0-9\-_]+)/', $content, $keyMatches, PREG_OFFSET_CAPTURE)) {
+				$keys = array_map(function ($match) {
+					return $match[0];
+				}, $keyMatches[1]);
 				
-				// Split content into prefix and suffix around the @key
-				$parts = preg_split('/@' . preg_quote($key, '/') . '/', $content, 2);
-				$prefix = trim($parts[0] ?? '');
-				$suffix = trim($parts[1] ?? '');
-				
-				// Ensure there's a space between prefix and author name
-				$label = $prefix . (empty($prefix) ? '' : ' ') . $data['author'] . ', ' . $data['year'] . $suffix;
+				// Single key
+				if (count($keys) === 1) {
+					$key = $keys[0];
+					$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
+					
+					// Split content into prefix and suffix around the @key
+					$parts = preg_split('/@' . preg_quote($key, '/') . '/', $content, 2);
+					$prefix = trim($parts[0] ?? '');
+					$suffix = trim($parts[1] ?? '');
+					
+					// Ensure there's a space between prefix and author name
+					$label = $prefix . (empty($prefix) ? '' : ' ') . $data['author'] . ', ' . $data['year'] . $suffix;
 
-				return '<span class="citation"><a href="#' . $key . '">(' . htmlspecialchars($label) . ')</a></span>';
+					return '<span class="citation"><a href="#' . $key . '">(' . htmlspecialchars($label) . ')</a></span>';
+				}
+				
+				// Multiple keys: render each key as its own link inside one citation span
+				$tokens = [];
+				$lastEnd = 0;
+				foreach ($keyMatches[0] as $index => $matchInfo) {
+					$matchStart = $matchInfo[1];
+					$tokens[] = ['type' => 'text', 'value' => substr($content, $lastEnd, $matchStart - $lastEnd)];
+					$tokens[] = ['type' => 'key', 'value' => $keys[$index]];
+					$lastEnd = $matchStart + strlen($matchInfo[0]);
+				}
+				$tokens[] = ['type' => 'text', 'value' => substr($content, $lastEnd)];
+				
+				$keyIndices = [];
+				foreach ($tokens as $index => $token) {
+					if ($token['type'] === 'key') {
+						$keyIndices[] = $index;
+					}
+				}
+				
+				$prefixText = '';
+				$suffixText = '';
+				if (!empty($keyIndices)) {
+					$firstKeyIndex = $keyIndices[0];
+					$lastKeyIndex = $keyIndices[count($keyIndices) - 1];
+					if ($firstKeyIndex > 0 && $tokens[$firstKeyIndex - 1]['type'] === 'text') {
+						$prefixText = $tokens[$firstKeyIndex - 1]['value'];
+					}
+					if ($lastKeyIndex < count($tokens) - 1 && $tokens[$lastKeyIndex + 1]['type'] === 'text') {
+						$suffixText = $tokens[$lastKeyIndex + 1]['value'];
+					}
+				}
+				
+				$separators = [];
+				for ($i = 0; $i < count($keyIndices) - 1; $i++) {
+					$betweenIndex = $keyIndices[$i] + 1;
+					$separator = '';
+					if (isset($tokens[$betweenIndex]) && $tokens[$betweenIndex]['type'] === 'text') {
+						$separator = $tokens[$betweenIndex]['value'];
+					}
+					$separators[] = $separator;
+				}
+				
+				$links = [];
+				foreach ($keys as $index => $key) {
+					$data = $bib[$key] ?? ['author' => $key, 'year' => 'n.d.'];
+					$label = '';
+					
+					if ($index === 0) {
+						$trimmedPrefix = trim($prefixText);
+						$label .= '(' . ($trimmedPrefix === '' ? '' : $trimmedPrefix . ' ');
+					}
+					
+					$label .= $data['author'] . ', ' . $data['year'];
+					
+					if ($index < count($keys) - 1) {
+						$separator = $separators[$index] ?? '';
+						$separator = ltrim($separator);
+						$separator = rtrim($separator);
+						if ($separator === '') {
+							$separator = ';';
+						}
+						$label .= $separator;
+					} else {
+						$trimmedSuffix = trim($suffixText);
+						if ($trimmedSuffix !== '') {
+							$label .= ' ' . $trimmedSuffix;
+						}
+						$label .= ')';
+					}
+					
+					$links[] = '<a href="#' . $key . '">' . htmlspecialchars($label) . '</a>';
+				}
+				
+				return '<span class="citation">' . implode('', $links) . '</span>';
 			}
 			
 			// If no valid citation key found, return original brackets unchanged
